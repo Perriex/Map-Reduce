@@ -36,26 +36,94 @@ int main()
 
 /* functions used in main */
 
-// communicate with children
-void assignProc(void);
-// exec mapper
-void createMapper(void);
-//  exec reducer
-void createReducer(void);
+void convertToCsv()
+{
+    FILE *fIn;
+    fIn = fopen("out", "r");
+    FILE *fOut;
+    char *name = "output.csv";
+    fOut = fopen(name, "w+");
+    char temp;
+    while ((temp = fgetc(fIn)) != EOF)
+    {
+        fprintf(fOut, "%c", temp);
+    }
+    fclose(fIn);
+    fclose(fOut);
+    printf("Output generated! name: output.csv\n");
+}
 
 void createReducer(void)
 {
+    char snum[5];
 
+    itoa(mapperCount, snum, 10);
+    printf("exec reducer!\n");
+    char *args = {parentToMapperPipe[0], parentToMapperPipe[1], snum};
+    execv("./reducer", args);
 }
 
 void createMapper(void)
 {
+    printf("exec Mapper!\n");
+    char *args = {parentToMapperPipe[0], parentToMapperPipe[1]};
+    execv("./mapper", args);
+}
 
+char *getName(int num)
+{
+    char *output2 = "../testcases/";
+    char *output = ".csv";
+
+    char snum[5];
+
+    itoa(num, snum, 10);
+    char *name = (char *)malooc(strlen(output2) + strlen(output) + strlen(snum));
+
+    strcpy(name, output2);
+    strcat(name, snum);
+    strcpy(name, output);
+
+    name[strlen(name)] = '\0';
+    return name;
 }
 
 void assignProc(void)
 {
+    //assign mappers
+    close(parentToMapperPipe[0]);
+    int count = mapperCount;
+    while (count != 0)
+    {
+        printf("Assigning Files\n");
+        char *buf = getName(count);
 
+        write(parentToMapperPipe[1], buf, strlen(buf));
+        count -= 1;
+
+        sleep(1);
+    }
+    close(parentToMapperPipe[1]);
+
+    // wair for reducer
+    close(reducerToParentPipe[1]);
+
+    char *buf = (char *)calloc(0, sizeof(char));
+    int temp;
+
+    while ((temp = read(reducerToParentPipe[1], buf, 1)) > 0)
+    {
+        printf("Done signal !\n");
+        if (buf[0] == 'D')
+        {
+            //write in file .csv
+            convertToCsv();
+            break;
+        }
+    }
+
+    free(buf);
+    close(reducerToParentPipe[0]);
 }
 
 void forkChildren(void)
@@ -87,7 +155,7 @@ void forkChildren(void)
     }
     else
     {
-        if (childsCount > mapperCount )
+        if (childsCount > mapperCount)
         {
             printf("All children forked.\n");
         }

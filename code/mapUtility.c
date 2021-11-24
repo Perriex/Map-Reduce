@@ -127,7 +127,7 @@ char *sortWords(char *file, int wordCount)
     return outputWords;
 }
 
-void countWords(char *file)
+char* countWords(char *file)
 {
     FILE *fIn;
     fIn = fopen(file, "r");
@@ -166,7 +166,7 @@ void countWords(char *file)
                         prevString[strlen(prevString)] = '\0';
                         printf("No more word %s [%d]", prevString, matchCount);
 
-                        fprintf(fOut, "%s\t%d\n", prevString, matchCount);
+                        fprintf(fOut, "%s:%d\n", prevString, matchCount);
                         matchCount = 1;
                         string[strlen(string)] = '\0';
 
@@ -196,23 +196,25 @@ void countWords(char *file)
         }
     }
     if (matchCount <= 1)
-    { // No match is found
-        printf("no more match found for [%s] --> %d\n", prevString, matchCount);
-        fprintf(fOut, "%s\t%d\n", prevString, matchCount);
+    { 
+        printf("no match found for %s\n", prevString, matchCount);
+        fprintf(fOut, "%s:%d\n", prevString, matchCount);
     }
     else
     {
-        printf("a previous match is found for [%s]-->\n", string);
-        fprintf(fOut, "%s\t%d\n", string, matchCount);
+        printf("match found for %s\n", string);
+        fprintf(fOut, "%s:%d\n", string, matchCount);
     }
     free(string);
     free(prevString);
-    free(name);
     fclose(fIn);
     fclose(fOut);
+
+
+    return name;
 }
 
-void handleFile(char *file)
+char* handleFile(char *file)
 {
     FILE *fIn;
     fIn = fopen(file, "r");
@@ -238,9 +240,13 @@ void handleFile(char *file)
     }
     fclose(fIn);
 
-    char *outputFile = sortWords(file, wordCount);
+    char* nameFile = strtok(file, "/"); 
+    nameFile = strtok(file, "/"); 
+    nameFile = strtok(file, "."); 
 
-    coutWords(outputFile);
+    char *outputFile = sortWords(nameFile, wordCount);
 
-    return;
+    char *nameMapFile = countWords(outputFile);
+
+    return nameMapFile; 
 }
