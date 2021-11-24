@@ -7,8 +7,13 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-void setWords(char *);
-void writeToFile(void);
+char words[1000][100] = {0};
+int numWords[1000] = {0};
+
+int wordsCount = 0;
+
+int setWords(char *);
+void writeToMain(int);
 
 char *intToSrc(int value)
 {
@@ -32,24 +37,29 @@ void waitForMappers(int tasks)
         strcat(path, numFile);
 
         mkfifo(path, 0666);
-        printf("@@ for pipe : %s\n", path);
         fd = open(path, O_RDONLY);
         char *str = malloc(100 * sizeof(char));
-        char *input=str;
-        printf("end\n");
+        char *input = str;
+        int index = -1;
         for (;;)
         {
-            if(read(fd, input, 1) <= 0)
+            if (read(fd, input, 1) <= 0)
                 continue;
-                
-            if(*input == ':' || *input == '\0')
+
+            if (*input == ':')
             {
                 *input = '\0';
-                printf("ins: %s\n", str);
+                index = setWords(str);
                 input = str;
                 continue;
             }
-            //setWords(str);
+            if (*input == '\0')
+            {
+                *input = '\0';
+                numWords[index] += atoi(str);
+                input = str;
+                continue;
+            }
             if (*input == '$')
             {
                 break;
@@ -60,17 +70,14 @@ void waitForMappers(int tasks)
         close(fd);
         count -= 1;
     }
-
-    // writeToFile();
 }
 
 int main(int argc, char *argv[])
 {
-    // printf("_____$$$$$$_________IN REDUCER__________$$$$$$_____\n");
 
     if (argc != 3)
     {
-        // printf("Mapper: Not enough arguments!\n");
+        printf("Mapper: Not enough arguments!\n");
         exit(1);
     }
     int readPipe = atoi(argv[0]);
@@ -81,19 +88,14 @@ int main(int argc, char *argv[])
 
     waitForMappers(tasks);
 
-    char *buf = "D\0";
-    // printf("Reduced file initilized!\n");
-    write(writePipe, buf, strlen(buf));
+    writeToMain(writePipe);
 
     close(writePipe);
 
+    exit(0);
+
     return 0;
 }
-
-char words[1000][100] = {0};
-int numWords[1000] = {0};
-
-int wordsCount = 0;
 
 int getIndex(char *word)
 {
@@ -107,77 +109,40 @@ int getIndex(char *word)
     return -1;
 }
 
-void setWords(char *file)
+int setWords(char *word)
 {
-    FILE *fIn;
-    fIn = fopen(file, "r");
-
-    char temp;
-    int charCount = 0;
-    char *string = malloc(sizeof(char));
-
-    while ((temp = fgetc(fIn)) != EOF)
+    int index = getIndex(word);
+    if (index < 0)
     {
-        if (temp = '\n')
-        {
-            if (charCount > 0)
-            {
-                printf("word : %s\n", string);
-                charCount = 0;
-
-                char *word = strtok(string, ":");
-                char *num = strtok(NULL, ":");
-                printf("word, num : %s %s\n", word, num);
-                int index = getIndex(word);
-                if (index < 0)
-                {
-                    strcpy(words[wordsCount], word);
-                    numWords[wordsCount] = atoi(num);
-                    wordsCount += 1;
-                }
-                else
-                {
-                    numWords[wordsCount] += atoi(num);
-                }
-
-                printf("HERE1\n");
-                free(string);
-                printf("HERE1b\n");
-                string = calloc(0, sizeof(char));
-            }
-        }
-        else
-        {
-            if (charCount == 0)
-            {
-                printf("HERE2\n");
-                free(string);
-                printf("HERE2b\n");
-                string = calloc(0, sizeof(char));
-            }
-            string[charCount] = temp;
-            charCount++;
-        }
+        strcpy(words[wordsCount], word);
+        numWords[wordsCount] = 0;
+        wordsCount += 1;
+        return wordsCount - 1;
     }
-
-    printf("HERE3\n");
-    free(string);
-    printf("HERE3b\n");
-    fclose(fIn);
+    else
+        return index;
 }
 
-void writeToFile()
+void writeToMain(int pipe)
 {
-    FILE *fOut;
-    char *name = "out";
-    fOut = fopen(name, "w+");
+    char temp;
+    int count = 0;
+    char *string = malloc(sizeof(char));
 
-    for (int i = 0; i <= wordsCount; i++)
+    while (count < wordsCount)
     {
-        // printf("result for %s -> %d\n", words[i], numWords[i]);
-        fprintf(fOut, "%s:%d\n", words[i], numWords[i]);
-    }
+        char *split = ":";
+        char *num = intToSrc(numWords[count]);
+        char *path = (char *)malloc(strlen(words[count]) + strlen(split) + strlen(num) + 2);
 
-    free(name);
-    fclose(fOut);
+        strcpy(path, words[count]);
+        strcat(path, split);
+        strcat(path, num);
+        strcat(path, "\n\0");
+        write(pipe, path, strlen(path) + 1);
+        count += 1;
+    }
+    string = "$";
+    write(pipe, string, strlen(string) + 1);
+    return;
 }

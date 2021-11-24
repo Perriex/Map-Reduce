@@ -25,7 +25,6 @@ void forkChildren(void);
 int main()
 {
     int fileCount = countfiles("../testcases");
-    //printf("Number of files: %d\n", fileCount);
 
     initChildren(fileCount);
 
@@ -45,35 +44,16 @@ char *intToSrc(int value)
     return buffer;
 }
 
-void convertToCsv()
-{
-    FILE *fIn;
-    fIn = fopen("out", "r");
-    FILE *fOut;
-    char *name = "output.csv";
-    fOut = fopen(name, "w+");
-    char temp;
-    while ((temp = fgetc(fIn)) != EOF)
-    {
-        fprintf(fOut, "%c", temp);
-    }
-    fclose(fIn);
-    fclose(fOut);
-    printf("Output generated! name: output.csv\n");
-}
-
 void createReducer(void)
 {
     char *snum = intToSrc(mapperCount);
     printf("exec reducer!\n");
     char *args[] = {intToSrc(reducerToParentPipe[0]), intToSrc(reducerToParentPipe[1]), snum, NULL};
-    //printf("%s %s %s %s\n", args[0], args[1], args[2], args[3]);
     execv("./reducer", args);
 }
 
 void createMapper(void)
 {
-    // printf("exec Mapper!\n");
     char *args[] = {intToSrc(parentToMapperPipe[0]), intToSrc(parentToMapperPipe[1]), NULL};
     execv("./mapper", args);
 }
@@ -84,16 +64,11 @@ char *getName(int num)
     char *output = ".csv";
 
     char *snum = intToSrc(num);
-    //  printf("NYMM: %s\n", snum);
     char *name = (char *)malloc(strlen(output2) + strlen(snum) + strlen(output));
     strcpy(name, output2);
-    // printf("1ADDRESSS: %s\n", name);
     strcat(name, snum);
-    //printf("2ADDRESSS: %s\n", name);
     strcat(name, output);
-    // printf("3ADDRESSS: %s\n", name);
     name[strlen(name)] = '\0';
-    // printf("4ADDRESSS: %s\n", name);
 
     return name;
 }
@@ -105,11 +80,8 @@ void assignProc(void)
     int count = mapperCount;
     while (count != 0)
     {
-        // printf("Assigning Files\n");
         char *buf = getName(count);
-        // printf("%s\n", buf);
         int i = write(parentToMapperPipe[1], buf, strlen(buf));
-        // printf("status: %d\n", i);
         count -= 1;
 
         sleep(1);
@@ -119,22 +91,36 @@ void assignProc(void)
     // wair for reducer
     close(reducerToParentPipe[1]);
 
-    char *buf = (char *)calloc(0, sizeof(char));
-    int temp;
+    char *str = malloc(100 * sizeof(char));
+    char *input = str;
 
-    while ((temp = read(reducerToParentPipe[1], buf, 1)) > 0)
+    FILE *fOut;
+    char *name = "output.csv";
+    fOut = fopen(name, "w+");
+
+    for (;;)
     {
-        printf("Done signal !\n");
-        if (buf[0] == 'D')
+        if (read(reducerToParentPipe[0], input, 1) <= 0)
+            continue;
+
+        if (*input == '\0')
         {
-            //write in file .csv
-            convertToCsv();
+            *input = '\0';
+            printf("@ %s\n", str);
+            fprintf(fOut, "%s", str);
+            input = str;
+            continue;
+        }
+        if (*input == '$')
+        {
             break;
         }
+        input++;
     }
-
-    free(buf);
+    free(str);
+    fclose(fOut);
     close(reducerToParentPipe[0]);
+    printf("Output generated! name: output.csv\n");
 }
 
 void forkChildren(void)
@@ -148,8 +134,6 @@ void forkChildren(void)
     int pid = getpid();
     if (parentPid > 0)
     {
-        //printf("parent process with pid in map : %d\n", pid);
-
         if (childsCount < mapperCount + 1) //plus reducer => childrenCount
         {
             childsCount += 1;
@@ -174,12 +158,10 @@ void forkChildren(void)
         {
             if (childsCount < mapperCount)
             {
-                //   printf("Create Mapper with pid: %d\n", pid);
                 createMapper();
             }
             else
             {
-                //  printf("Create Reducer with pid: %d\n", pid);
                 createReducer();
             }
         }
@@ -205,7 +187,7 @@ void initChildren(int fileCount)
     mapperCount = fileCount;
     reducerCount = 1;
 
-    //printf("Number of mappers : %d and number of reducers : %d \n", mapperCount, reducerCount);
+    printf("Number of mappers : %d and number of reducers : %d \n", mapperCount, reducerCount);
 
     return;
 }
