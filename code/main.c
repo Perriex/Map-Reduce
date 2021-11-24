@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <dirent.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 int mapperCount = 0;  // number of mappers
 int reducerCount = 0; // number of reducers
@@ -23,7 +25,7 @@ void forkChildren(void);
 int main()
 {
     int fileCount = countfiles("../testcases");
-    printf("Number of files: %d\n", fileCount);
+    //printf("Number of files: %d\n", fileCount);
 
     initChildren(fileCount);
 
@@ -35,6 +37,13 @@ int main()
 }
 
 /* functions used in main */
+
+char *intToSrc(int value)
+{
+    char *buffer = calloc(0, sizeof(char));
+    snprintf(buffer, 10, "%d", value);
+    return buffer;
+}
 
 void convertToCsv()
 {
@@ -55,18 +64,17 @@ void convertToCsv()
 
 void createReducer(void)
 {
-    char snum[5];
-
-    itoa(mapperCount, snum, 10);
+    char *snum = intToSrc(mapperCount);
     printf("exec reducer!\n");
-    char *args = {parentToMapperPipe[0], parentToMapperPipe[1], snum};
+    char *args[] = {intToSrc(reducerToParentPipe[0]), intToSrc(reducerToParentPipe[1]), snum, NULL};
+    //printf("%s %s %s %s\n", args[0], args[1], args[2], args[3]);
     execv("./reducer", args);
 }
 
 void createMapper(void)
 {
-    printf("exec Mapper!\n");
-    char *args = {parentToMapperPipe[0], parentToMapperPipe[1]};
+    // printf("exec Mapper!\n");
+    char *args[] = {intToSrc(parentToMapperPipe[0]), intToSrc(parentToMapperPipe[1]), NULL};
     execv("./mapper", args);
 }
 
@@ -75,16 +83,18 @@ char *getName(int num)
     char *output2 = "../testcases/";
     char *output = ".csv";
 
-    char snum[5];
-
-    itoa(num, snum, 10);
-    char *name = (char *)malooc(strlen(output2) + strlen(output) + strlen(snum));
-
+    char *snum = intToSrc(num);
+    //  printf("NYMM: %s\n", snum);
+    char *name = (char *)malloc(strlen(output2) + strlen(snum) + strlen(output));
     strcpy(name, output2);
+    // printf("1ADDRESSS: %s\n", name);
     strcat(name, snum);
-    strcpy(name, output);
-
+    //printf("2ADDRESSS: %s\n", name);
+    strcat(name, output);
+    // printf("3ADDRESSS: %s\n", name);
     name[strlen(name)] = '\0';
+    // printf("4ADDRESSS: %s\n", name);
+
     return name;
 }
 
@@ -95,10 +105,11 @@ void assignProc(void)
     int count = mapperCount;
     while (count != 0)
     {
-        printf("Assigning Files\n");
+        // printf("Assigning Files\n");
         char *buf = getName(count);
-
-        write(parentToMapperPipe[1], buf, strlen(buf));
+        // printf("%s\n", buf);
+        int i = write(parentToMapperPipe[1], buf, strlen(buf));
+        // printf("status: %d\n", i);
         count -= 1;
 
         sleep(1);
@@ -137,7 +148,7 @@ void forkChildren(void)
     int pid = getpid();
     if (parentPid > 0)
     {
-        printf("parent process with pid in map : %d\n", pid);
+        //printf("parent process with pid in map : %d\n", pid);
 
         if (childsCount < mapperCount + 1) //plus reducer => childrenCount
         {
@@ -163,12 +174,12 @@ void forkChildren(void)
         {
             if (childsCount < mapperCount)
             {
-                printf("Create Mapper with pid: %d\n", pid);
+                //   printf("Create Mapper with pid: %d\n", pid);
                 createMapper();
             }
             else
             {
-                printf("Create Reducer with pid: %d\n", pid);
+                //  printf("Create Reducer with pid: %d\n", pid);
                 createReducer();
             }
         }
@@ -194,7 +205,7 @@ void initChildren(int fileCount)
     mapperCount = fileCount;
     reducerCount = 1;
 
-    printf("Number of mappers : %d and number of reducers : %d \n", mapperCount, reducerCount);
+    //printf("Number of mappers : %d and number of reducers : %d \n", mapperCount, reducerCount);
 
     return;
 }
