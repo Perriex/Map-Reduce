@@ -16,16 +16,51 @@ char *map(char *file)
 
 void createPipeToReduce(char *name)
 {
-    //printf("Opreration done! send to Reducer!\n");
-    char *fifo = "/tmp/myfifo";
+    char *fifo = "/tmp/";
 
-    mkfifo(fifo, 0666);
+    char *path = (char *)malloc(strlen(name) + strlen(fifo));
 
-    int fd = open(fifo, O_WRONLY);
+    strcpy(path, fifo);
+    strcat(path, name);
 
-    //printf("File %s generated!\n", name);
-    write(fd, name, strlen(name) + 1);
+    mkfifo(path, 0666);
+
+    FILE *fIn;
+    fIn = fopen(name, "r");
+
+    char temp;
+    int count = 0;
+    char *string = malloc(sizeof(char));
+
+    while ((temp = fgetc(fIn)) != EOF)
+    {
+        if (temp == '\n')
+        {
+            if (count > 0)
+            {
+                int fd = open(path, O_WRONLY);
+                //printf("________________________ %s\n", string);
+                write(fd, string, strlen(string) + 1);
+                close(fd);
+                count = 0;
+            }
+        }
+        else
+        {
+            if (count == 0)
+            {
+                free(string);
+                string = calloc(0, sizeof(char));
+            }
+            string[count] = temp;
+            count++;
+        }
+    }
+    string = "$\0";
+    int fd = open(path, O_WRONLY);
+    write(fd, string, strlen(string) + 1);
     close(fd);
+
     exit(0);
 }
 

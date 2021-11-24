@@ -10,26 +10,47 @@
 void setWords(char *);
 void writeToFile(void);
 
+char *intToSrc(int value)
+{
+    char *buffer = calloc(0, sizeof(char));
+    snprintf(buffer, 10, "%d", value);
+    return buffer;
+}
+
 void waitForMappers(int tasks)
 {
     int fd;
     int count = tasks;
-    char *myfifo = "/tmp/myfifo";
+    char *fifo = "/tmp/c_sort_";
 
-    mkfifo(myfifo, 0666);
-
-    char str[100];
-    while (count != 0)
+    while (count > 0)
     {
+        char *numFile = intToSrc(count);
+        char *path = (char *)malloc(strlen(fifo) + strlen(numFile));
+
+        strcpy(path, fifo);
+        strcat(path, numFile);
+
+        mkfifo(path, 0666);
+        printf("@@ for pipe : %s\n", path);
+        while (1)
+        {
+            char *str = malloc(100 * sizeof(char));
+            fd = open(path, O_RDONLY);
+            read(fd, str, strlen(str));
+            //setWords(str);
+            printf("%s\n", str);
+            if (strcmp(str, "$") == 0)
+            {
+                break;
+            }
+            close(fd);
+            free(str);
+        }
         count -= 1;
-        fd = open(myfifo, O_RDONLY);
-        read(fd, str, 100);
-        setWords(str);
-        //printf("File %s gotten!\n", str);
-        close(fd);
     }
 
-    writeToFile();
+    // writeToFile();
 }
 
 int main(int argc, char *argv[])
