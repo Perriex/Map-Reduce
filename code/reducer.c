@@ -33,20 +33,31 @@ void waitForMappers(int tasks)
 
         mkfifo(path, 0666);
         printf("@@ for pipe : %s\n", path);
-        while (1)
+        fd = open(path, O_RDONLY);
+        char *str = malloc(100 * sizeof(char));
+        char *input=str;
+        printf("end\n");
+        for (;;)
         {
-            char *str = malloc(100 * sizeof(char));
-            fd = open(path, O_RDONLY);
-            read(fd, str, strlen(str));
+            if(read(fd, input, 1) <= 0)
+                continue;
+                
+            if(*input == ':' || *input == '\0')
+            {
+                *input = '\0';
+                printf("ins: %s\n", str);
+                input = str;
+                continue;
+            }
             //setWords(str);
-            printf("%s\n", str);
-            if (strcmp(str, "$") == 0)
+            if (*input == '$')
             {
                 break;
             }
-            close(fd);
-            free(str);
+            input++;
         }
+        free(str);
+        close(fd);
         count -= 1;
     }
 

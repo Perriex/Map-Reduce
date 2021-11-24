@@ -31,6 +31,7 @@ void createPipeToReduce(char *name)
     char temp;
     int count = 0;
     char *string = malloc(sizeof(char));
+    int fd = open(path, O_WRONLY);
 
     while ((temp = fgetc(fIn)) != EOF)
     {
@@ -40,8 +41,8 @@ void createPipeToReduce(char *name)
             {
                 int fd = open(path, O_WRONLY);
                 //printf("________________________ %s\n", string);
+                string[count] = '\0';
                 write(fd, string, strlen(string) + 1);
-                close(fd);
                 count = 0;
             }
         }
@@ -50,14 +51,13 @@ void createPipeToReduce(char *name)
             if (count == 0)
             {
                 free(string);
-                string = calloc(0, sizeof(char));
+                string = calloc(100, sizeof(char));
             }
             string[count] = temp;
             count++;
         }
     }
-    string = "$\0";
-    int fd = open(path, O_WRONLY);
+    string = "$";
     write(fd, string, strlen(string) + 1);
     close(fd);
 
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
     // printf("argument In map: %d %d\n", readPipe, writePipe);
     close(writePipe);
 
-    char *buf = (char *)calloc(0, sizeof(char));
+    char *buf = (char *)calloc(1000, sizeof(char));
 
     int temp;
 

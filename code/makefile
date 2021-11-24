@@ -1,11 +1,7 @@
-default: a
+all: mapper main reducer
 
-a.o: main.c 
-    gcc -c main.c -o a.o
-
-a: a.o
-    gcc a.o -o a
+% : %.c 
+	gcc -o $@ $^
 
 clean:
-    -rm -f a.o
-    -rm -f a
+	rm mapper main reducer
