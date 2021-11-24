@@ -6,59 +6,103 @@
 
 int mapperCount = 0;  // number of mappers
 int reducerCount = 0; // number of reducers
-int childsCount = 0;
+int childsCount = 0;  // number of processes
 
 int parentToMapperPipe[2];  // pipe between parent -> mapper
 int reducerToParentPipe[2]; // pipe between parent <- reducer
 
-int countfiles(char *); // calculate number of files exits in folder "../testcases"
-void initChildren(int); // init global variables
-void createPipes(void); // create pipes between parent and children
-void forkMappers(void); // fork children
+// calculate number of files exits in folder "../testcases"
+int countfiles(char *);
+// init global variables
+void initChildren(int);
+// create pipes between parent and children
+void createPipes(void);
+// fork mappers and reducer (children)
+void forkChildren(void);
 
 int main()
 {
-    //first we calculate number of files in testcases
     int fileCount = countfiles("../testcases");
     printf("Number of files: %d\n", fileCount);
 
-    //init number of processes
     initChildren(fileCount);
 
-    // create pipes
     createPipes();
 
-    // fork mappers
-    forkMappers();
+    forkChildren();
 
     return 0;
 }
 
 /* functions used in main */
 
-void forkMappers(void)
+// communicate with children
+void assignProc(void);
+// exec mapper
+void createMapper(void);
+//  exec reducer
+void createReducer(void);
+
+void createReducer(void)
+{
+
+}
+
+void createMapper(void)
+{
+
+}
+
+void assignProce(void)
+{
+    
+}
+
+void forkChildren(void)
 {
     int parentPid = fork();
     if (parentPid < 0)
     {
-        printf("Error in Fork parent\n");
+        printf("Error in Fork\n");
         exit(1);
     }
-    if (parentPid == 0)
+    int pid = getpid();
+    if (parentPid > 0)
     {
-    }
-    else
-    {
-        int pid = getpid();
-        printf("new process with pid in map : %d", pid);
+        printf("parent process with pid in map : %d\n", pid);
 
-        if (childsCount < mapperCount)
+        if (childsCount < mapperCount + 1) //plus reducer => childrenCount
         {
             childsCount += 1;
-            forkMappers();
+            forkChildren();
         }
         else
         {
+            assignProcess();
+            sleep(1); // wait until child forking done
+            printf("Done!\n");
+            wait(NULL); // all children finish their job
+            exit(0);
+        }
+    }
+    else
+    {
+        if (childsCount == mapperCount + 1)
+        {
+            printf("All children forked.\n");
+        }
+        else
+        {
+            if (childsCount <= mapperCount)
+            {
+                printf("Create Mapper with pid: %d\n", pid);
+                createMapper();
+            }
+            else
+            {
+                printf("Create Reducer with pid: %d\n", pid);
+                createReducer();
+            }
         }
     }
 }
