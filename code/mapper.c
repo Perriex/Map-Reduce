@@ -4,8 +4,10 @@
 #include <string.h>
 #include <dirent.h>
 
+#include "mapUtility.c"
+
 void map(char* file){
-    countWords(file);
+    handleFile(file);
 }
 
 void createPipeToReduce(){

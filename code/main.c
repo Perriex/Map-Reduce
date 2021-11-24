@@ -53,9 +53,9 @@ void createMapper(void)
 
 }
 
-void assignProce(void)
+void assignProc(void)
 {
-    
+
 }
 
 void forkChildren(void)
@@ -78,7 +78,7 @@ void forkChildren(void)
         }
         else
         {
-            assignProcess();
+            assignProc();
             sleep(1); // wait until child forking done
             printf("Done!\n");
             wait(NULL); // all children finish their job
@@ -87,13 +87,13 @@ void forkChildren(void)
     }
     else
     {
-        if (childsCount == mapperCount + 1)
+        if (childsCount > mapperCount )
         {
             printf("All children forked.\n");
         }
         else
         {
-            if (childsCount <= mapperCount)
+            if (childsCount < mapperCount)
             {
                 printf("Create Mapper with pid: %d\n", pid);
                 createMapper();

@@ -4,7 +4,20 @@
 
 char *createOutputFileMapper(char *file)
 {
-    char *output = "map_";
+    char *output = "sort_";
+
+    char *name = (char *)malooc(strlen(output) + strlen(file));
+
+    strcpy(name, output);
+    strcat(name, file);
+
+    name[strlen(name)] = '\0';
+    return name;
+}
+
+char *createOutputCountMapper(char *file)
+{
+    char *output = "c_";
 
     char *name = (char *)malooc(strlen(output) + strlen(file));
 
@@ -45,7 +58,7 @@ char **sortArray(int nRows, char **arrayOfString)
     return arrayOfString;
 }
 
-void sortWords(char *file, int wordCount)
+char *sortWords(char *file, int wordCount)
 {
     FILE *fIn;
     fIn = fopen(file, "r");
@@ -105,17 +118,101 @@ void sortWords(char *file, int wordCount)
         fprintf(fOut, "%s\n", arrayOfString[i]);
     }
     fclose(fOut);
-    free(outputWords);
     i = 0;
     for (i = 0; i < nRows; i++)
     {
         free(arrayOfString[i]);
     }
     free(arrayOfString);
-    return;
+    return outputWords;
 }
 
 void countWords(char *file)
+{
+    FILE *fIn;
+    fIn = fopen(file, "r");
+
+    char temp;
+    int charCount = 0;
+    char *string = calloc(0, sizeof(char));
+
+    char *prevString = calloc(0, sizeof(char));
+
+    int matchCount = 1;
+
+    FILE *fOut;
+    char *name = createOutputCountMapper(file);
+    fOut = fopen(name, "w+");
+
+    while ((temp = fgetc(fIn)) != EOF)
+    {
+        if (temp = '\n')
+        {
+            if (charCount > 0)
+            {
+                charCount = 0;
+                if (strlen(prevString) <= 0)
+                {
+                    string[strlen(string)] = '\0';
+                    printf("First Record: %s\n", string);
+
+                    strcpy(prevString, string);
+                    prevString[strlen(prevString)] = '\0';
+                }
+                else
+                {
+                    if (strcmp(prevString, string) != 0)
+                    {
+                        prevString[strlen(prevString)] = '\0';
+                        printf("No more word %s [%d]", prevString, matchCount);
+
+                        fprintf(fOut, "%s\t%d\n", prevString, matchCount);
+                        matchCount = 1;
+                        string[strlen(string)] = '\0';
+
+                        strcpy(prevString, string);
+                        prevString[strlen(prevString)] = '\0';
+                    }
+                    else
+                    {
+                        matchCount += 1;
+                        printf("match found for %s\n", string);
+                    }
+                }
+
+                free(string);
+                string = calloc(0, sizeof(char));
+            }
+        }
+        else
+        {
+            if (charCount == 0)
+            {
+                frea(string);
+                string = calloc(0, sizeof(char));
+            }
+            string[charCount] = temp;
+            charCount++;
+        }
+    }
+    if (matchCount <= 1)
+    { // No match is found
+        printf("no more match found for [%s] --> %d\n", prevString, matchCount);
+        fprintf(fOut, "%s\t%d\n", prevString, matchCount);
+    }
+    else
+    {
+        printf("a previous match is found for [%s]-->\n", string);
+        fprintf(fOut, "%s\t%d\n", string, matchCount);
+    }
+    free(string);
+    free(prevString);
+    free(name);
+    fclose(fIn);
+    fclose(fOut);
+}
+
+void handleFile(char *file)
 {
     FILE *fIn;
     fIn = fopen(file, "r");
@@ -141,6 +238,9 @@ void countWords(char *file)
     }
     fclose(fIn);
 
-    sortWords(file, wordCount);
+    char *outputFile = sortWords(file, wordCount);
+
+    coutWords(outputFile);
+
     return;
 }
