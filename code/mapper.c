@@ -60,7 +60,6 @@ void createPipeToReduce(char *name)
     write(fd, string, strlen(string) + 1);
     close(fd);
 
-    exit(0);
 }
 
 int main(int argc, char *argv[])
@@ -89,7 +88,7 @@ int main(int argc, char *argv[])
     printf("@ Mapper with pid %d finished!\n", getpid());
     free(buf);
     close(readPipe);
-
+    exit(0);
     return 0;
 }
 
